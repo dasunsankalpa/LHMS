@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LHMS - Lecture Hall Management System</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      color: #2c3e50;
+    }
+    .hero-bg {
+      min-height: 92vh;
+      width: 100vw;
+      background: url('homeIMG.jpg') no-repeat center center/cover;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      align-items: stretch;
+      position: relative;
+    }
+    .hero-bg::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(35, 37, 47, 0.52);
+      z-index: 1;
+      pointer-events: none;
+    }
+    .topbar {
+      width: 100%;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 52px 0 52px;
+      box-sizing: border-box;
+      position: relative;
+    }
+    .brand-block {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .brand {
+      font-size: 2rem;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: #fff;
+      text-shadow: 0 2px 10px #000a;
+    }
+    .subtitle {
+      font-size: 1rem;
+      color: #e0e6ef;
+      font-weight: 500;
+      margin-left: 2px;
+      letter-spacing: 0.3px;
+      text-shadow: 0 1px 8px #000b;
+    }
+    .topbar-actions {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+    }
+    .topbar-actions button {
+      border: none;
+      border-radius: 20px;
+      background: #fff;
+      color: #2563db;
+      font-weight: 600;
+      font-size: 1rem;
+      padding: 10px 34px;
+      cursor: pointer;
+      box-shadow: 0 2px 12px #0a0d1d18;
+      transition: background 0.15s, color 0.15s;
+    }
+    .topbar-actions button.signup {
+      background: #3498db;
+      color: #fff;
+      box-shadow: 0 4px 18px #3498db33;
+    }
+    .topbar-actions button:hover {
+      background: #ecf0f1;
+      color: #2563db;
+    }
+    .topbar-actions button.signup:hover {
+      background: #1951bb;
+      color: #fff;
+    }
+    .user-icon-btn {
+      background: none !important;
+      border: none !important;
+      box-shadow: none !important;
+      padding: 0 5px !important;
+      cursor: pointer;
+      margin-left: 6px;
+      display: flex;
+      align-items: center;
+      transition: background 0.15s;
+    }
+    .user-icon-btn svg {
+      width: 32px; height: 32px;
+      stroke: #fff;
+      background: #032b45;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px #0002;
+      transition: background 0.2s;
+    }
+    .user-icon-btn:hover svg {
+      background: #2563db;
+    }
+    .hero-center-content {
+      z-index: 2;
+      margin: 0 auto;
+      margin-top: 90px;
+      margin-bottom: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      padding: 24px 16px 40px 16px;
+      max-width: 700px;
+      background: none;
+    }
+    .hero-center-content h1 {
+      font-size: 2.6rem;
+      font-weight: 900;
+      margin: 0 0 22px 0;
+      color: #fff;
+      letter-spacing: 1.5px;
+      text-align: center;
+      text-shadow: 0 3px 22px #000b, 0 1px 0px #fff3;
+    }
+    .hero-center-content p {
+      font-size: 1.45rem;
+      margin: 0 0 36px 0;
+      color: #e8eefd;
+      opacity: 0.99;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-align: center;
+      text-shadow: 0 3px 12px #000c, 0 2px 8px #fff1;
+    }
+    .getstarted-btn {
+      background: #3498db;
+      color: #fff;
+      font-weight: 700;
+      border: none;
+      border-radius: 22px;
+      padding: 15px 48px;
+      font-size: 1.15rem;
+      box-shadow: 0 6px 20px #3498db33;
+      transition: background 0.18s, box-shadow 0.17s, transform 0.14s;
+      margin-top: 5px;
+      cursor: pointer;
+      letter-spacing: 1px;
+    }
+    .getstarted-btn:hover {
+      background: #2563db;
+      box-shadow: 0 10px 36px #1951bb70;
+      transform: translateY(-2px) scale(1.045);
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0; top: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(44, 62, 80, 0.18);
+      justify-content: center;
+      align-items: center;
+    }
+    .login-box {
+      background: #fff;
+      padding: 35px 30px 26px 30px;
+      border-radius: 18px;
+      box-shadow: 0 8px 38px #2c3e5027;
+      min-width: 340px;
+      max-width: 95vw;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      position: relative;
+    }
+    .close-btn {
+      position: absolute;
+      top: 13px; right: 18px;
+      font-size: 1.7rem;
+      color: #bbb;
+      cursor: pointer;
+      font-weight: bold;
+      transition: color 0.2s;
+      border: none;
+      background: none;
+    }
+    .close-btn:hover { color: #e74c3c; }
+    .login-title {
+      text-align: center;
+      font-size: 2rem;
+      color: #4b4444;
+      font-weight: 700;
+      margin-bottom: 26px;
+      margin-top: 0;
+      letter-spacing: 0.7px;
+    }
+    .form-group {
+      margin-bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .form-group label {
+      font-weight: 600;
+      font-size: 1rem;
+      color: #413a3a;
+      margin-bottom: 7px;
+    }
+    .form-group input[type="email"],
+    .form-group input[type="password"],
+    .form-group input[type="text"] {
+      font-size: 1rem;
+      padding: 12px 14px;
+      border: 1px solid #d8d8d8;
+      border-radius: 6px;
+      outline: none;
+      transition: border-color 0.18s;
+      background: #fafbfc;
+      width: 100%;
+    }
+    .form-group input:focus {
+      border-color: #3498db;
+    }
+    .forgot-link {
+      color: #2563db;
+      text-decoration: none;
+      font-size: 1rem;
+      font-weight: 500;
+      margin-bottom: 20px;
+      margin-top: -6px;
+      transition: color 0.17s;
+      width: fit-content;
+    }
+    .forgot-link:hover {
+      color: #1951bb;
+      text-decoration: underline;
+    }
+    .login-btn {
+      background: #2563db;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      padding: 13px 0;
+      cursor: pointer;
+      margin-top: 5px;
+      margin-bottom: 14px;
+      transition: background 0.18s;
+      box-shadow: 0 3px 12px #2563db11;
+    }
+    .login-btn:hover { background: #1951bb; }
+    .bottom-text {
+      text-align: center;
+      font-size: 1rem;
+      margin-top: 12px;
+      color: #444;
+    }
+    .signup-link {
+      color: #2563db;
+      font-weight: 600;
+      text-decoration: none;
+      margin-left: 2px;
+      transition: color 0.17s;
+    }
+    .signup-link:hover {
+      text-decoration: underline;
+      color: #1951bb;
+    }
+    .features {
+      text-align: center;
+      padding: 50px 20px 60px 20px;
+      background: #fff;
+    }
+    .features h2 {
+      margin-bottom: 40px;
+      font-size: 2rem;
+      font-weight: 800;
+      color: #2c3e50;
+    }
+    .feature-cards {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      flex-wrap: wrap;
+    }
+    .card {
+      background: #f8f8f8;
+      padding: 20px;
+      border-radius: 10px;
+      width: 250px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.10);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 30px 0 #3498db1c;
+    }
+    .card img {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 14px;
+    }
+    .card h3 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #2c3e50;
+      margin: 0 0 10px 0;
+    }
+    .card p {
+      font-size: 0.98rem;
+      color: #2c3e50;
+      opacity: 0.95;
+      margin: 0;
+    }
+    .show-pw-label {
+      font-size: 0.98rem;
+      cursor: pointer;
+      margin-top: 6px;
+      color: #2563db;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: max-content;
+    }
+    @media (max-width: 650px) {
+      .topbar { padding: 16px 6vw 0 6vw; }
+      .hero-center-content h1 { font-size: 2rem; }
+      .hero-center-content p { font-size: 1rem; }
+      .features h2 { font-size: 1.2rem; }
+    }
+    @media (max-width: 420px) {
+      .hero-center-content { padding: 18px 4vw 20px 4vw; }
+      .brand { font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="hero-bg">
+    <div class="topbar">
+      <div class="brand-block">
+        <span class="brand">LHMS</span>
+        <span class="subtitle">Lecture Hall Management System</span>
+      </div>
+      <div class="topbar-actions">
+        <button id="showLoginBtn">Login</button>
+        <button class="signup" id="signupBtn">Sign Up</button>
+        <button id="accountBtn" class="user-icon-btn" title="My Account">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke="white" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="8" r="4"/>
+            <path d="M4 20c0-3.5 3.5-6 8-6s8 2.5 8 6"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="hero-center-content">
+      <h1>Welcome to LHMS</h1>
+      <p>Efficiently manage and book lecture halls across campus</p>
+      <button class="getstarted-btn">Get Started</button>
+    </div>
+  </div>
+
+  <!-- LOGIN MODAL -->
+  <div id="loginModal" class="modal">
+    <form class="login-box" onsubmit="login(event)">
+      <button type="button" class="close-btn" id="closeLoginModal">&times;</button>
+      <div class="login-title">Login</div>
+      <div class="form-group">
+        <label for="login-email">Email</label>
+        <input id="login-email" name="login-email" placeholder="Enter your email" type="email" required>
+      </div>
+      <div class="form-group">
+        <label for="login-password">Password</label>
+        <input id="login-password" name="login-password" placeholder="Enter your password" type="password" required>
+        <label class="show-pw-label">
+          <input type="checkbox" id="showPassword">
+          Show Password
+        </label>
+      </div>
+      <a href="#" class="forgot-link">Forgot Password?</a>
+      <button class="login-btn" type="submit">Login</button>
+      <div class="bottom-text">
+        Don't have an account ?
+        <a href="signup.html" class="signup-link">Sign up</a>
+      </div>
+    </form>
+  </div>
+
+  <section class="features">
+    <h2>How LHMS Helps You</h2>
+    <div class="feature-cards">
+      <div class="card">
+        <img src="https://cdn-icons-png.flaticon.com/512/684/684908.png" alt="Easy Booking">
+        <h3>Easy Booking</h3>
+        <p>Lecturers and students can easily book lecture halls for classes or events.</p>
+      </div>
+      <div class="card">
+        <img src="https://cdn-icons-png.flaticon.com/512/1484/1484828.png" alt="Multi-Faculty Access">
+        <h3>Multi-Faculty Access</h3>
+        <p>All faculties can hire our lecture halls for their activities, exams, and events.</p>
+      </div>
+      <div class="card">
+        <img src="https://cdn-icons-png.flaticon.com/512/2910/2910796.png" alt="Flexible Scheduling">
+        <h3>Flexible Scheduling</h3>
+        <p>Available for booking on weekdays and Saturday mornings.</p>
+      </div>
+    </div>
+  </section>
+
+ <script>
+document.querySelector('.getstarted-btn').addEventListener('click', function() {
+    window.location.href = "facilitiesVIEW.html";
+});
+
+document.getElementById('signupBtn').onclick = function() {
+  window.location.href = "signup.html";
+};
+
+document.getElementById('showLoginBtn').onclick = function() {
+  document.getElementById('loginModal').style.display = 'flex';
+};
+
+document.getElementById('closeLoginModal').onclick = function() {
+  document.getElementById('loginModal').style.display = 'none';
+};
+
+window.onclick = function(event) {
+  const modal = document.getElementById('loginModal');
+  if (event.target === modal) {
+    modal.style.display = 'none';
+  }
+};
+
+if (window.location.search.includes('showLogin=1')) {
+  setTimeout(function() {
+    document.getElementById('loginModal').style.display = 'flex';
+    history.replaceState({}, document.title, window.location.pathname);
+  }, 300);
+}
+
+document.getElementById('login-email').addEventListener('input', function() {
+  document.getElementById('login-password').value = '';
+});
+
+document.getElementById('showPassword').addEventListener('change', function() {
+  const pw = document.getElementById('login-password');
+  pw.type = this.checked ? 'text' : 'password';
+});
+
+function login(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value;
+  const password = document.getElementById('login-password').value;
+
+  fetch('http://localhost:3000/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+	  localStorage.setItem('lhms_loggedIn', 'yes');
+	  localStorage.setItem('lhms_fullname', data.fullname); 
+      if (email === 'admin01@gmail.com' && password === '11111111') {
+        window.location.href = 'adminMAIN.html';
+      } else {
+        window.location.href = 'user.html';
+      }
+    } else {
+      alert('Invalid email or password');
+    }
+  })
+  .catch(err => {
+    alert('Login failed. Try again.');
+    console.error(err);
+  });
+}
+
+// User Account Icon - direct to user.html if logged in, else login modal
+document.getElementById('accountBtn').onclick = function() {
+  if (localStorage.getItem('lhms_loggedIn') === 'yes') {
+    window.location.href = "user.html";
+  } else {
+    alert("Please login first!");
+    document.getElementById('loginModal').style.display = 'flex';
+  }
+};
+</script>
+</body>
+</html>

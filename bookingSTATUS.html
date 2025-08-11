@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LHMS - Recent Bookings</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;}
+    body { background-color: #f5f7fa; color: #333; line-height: 1.6; padding: 20px;}
+    .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);}
+    h1 { color: #2c3e50; margin-bottom: 20px; text-align: center;}
+    .search-filter { display: flex; gap: 15px; margin-bottom: 20px; flex-wrap: wrap;}
+    .search-filter input, .search-filter select {
+      padding: 10px 15px; border: 1px solid #ddd; border-radius: 5px; font-size: 1rem; flex: 1; min-width: 200px;
+    }
+    .search-filter button {
+      padding: 10px 20px; background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;
+    }
+    .bookings-table { width: 100%; border-collapse: collapse; margin-top: 20px;}
+    .bookings-table th, .bookings-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #e0e0e0;}
+    .bookings-table th { background-color: #2c3e50; color: white; position: sticky; top: 0;}
+    .status { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;}
+    .pending   { background-color: #fff3cd; color: #856404;}
+    .approved  { background-color: #d4edda; color: #155724;}
+    .cancelled { background-color: #f8d7da; color: #721c24;}
+    .action-btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; margin-right: 5px; transition: all 0.2s;}
+    .approve-btn { background-color: #28a745; color: white;}
+    .cancel-btn  { background-color: #dc3545; color: white;}
+    .view-btn    { background-color: #17a2b8; color: white;}
+    .action-btn:disabled { opacity: 0.5; pointer-events: none;}
+    .action-btn:hover { opacity: 0.9; transform: translateY(-1px);}
+    .button-wrapper { display: flex; justify-content: center; margin-top: 30px;}
+    .submit-btn { background-color: #3498db; color: white; padding: 12px 24px; border: none; border-radius: 4px; font-size: 1rem; font-weight: 600; cursor: pointer;}
+    .submit-btn:hover { background-color: #2980b9;}
+    #toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999;}
+    .toast { display: flex; align-items: center; min-width: 200px; margin-bottom: 10px; padding: 12px 16px; border-radius: 4px; color: #fff; font-weight: 500; box-shadow: 0 2px 6px rgba(0,0,0,0.2); opacity: 0; transform: translateY(-10px); transition: opacity 0.3s ease, transform 0.3s ease;}
+    .toast.show { opacity: 1; transform: translateY(0);}
+    .toast.success { background-color: #28a745;}
+    .toast.error   { background-color: #dc3545;}
+
+    .admin-main-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #1d87c6;
+      color: #fff;
+      border: none;
+      border-radius: 18px;
+      padding: 6px 14px 6px 10px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-bottom: 16px;
+      margin-left: auto;
+      transition: background 0.2s;
+      box-shadow: 0 1px 4px rgba(44,62,80,0.07);
+    }
+    .admin-main-btn:hover { background: #176fa2; }
+    .admin-main-btn svg { width: 16px; height: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button class="admin-main-btn" onclick="goToAdminMain()">
+      <svg viewBox="0 0 20 20" fill="currentColor">
+        <path d="M6.293 9.293a1 1 0 011.414 0L10 11.586V4a1 1 0 112 0v7.586l2.293-2.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+      </svg>
+      Admin Main
+    </button>
+    <h1>Recent Bookings</h1>
+    <div class="search-filter">
+      <input type="text" id="searchInput" placeholder="Search bookings...">
+      <select id="statusFilter">
+        <option value="">All Status</option>
+        <option value="Pending">Pending</option>
+        <option value="Approved">Approved</option>
+        <option value="Cancelled">Cancelled</option>
+      </select>
+      <select id="facilityFilter">
+        <option value="">All Facilities</option>
+        <option value="Lecture Hall">Lecture Hall</option>
+        <option value="Computer Lab">Computer Lab</option>
+        <option value="Seminar Hall">Seminar Hall</option>
+      </select>
+      <button onclick="applyFilters()">Search</button>
+    </div>
+    <table class="bookings-table">
+      <thead>
+        <tr>
+          <th>Booking ID</th>
+          <th>Facility</th>
+          <th>Booked By</th>
+          <th>Date & Time</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody class="bookings-table-body"></tbody>
+    </table>
+  </div>
+  <div class="button-wrapper">
+    <button class="submit-btn">Save Action</button>
+  </div>
+  <div id="toast-container"></div>
+
+  <script>
+    // Go to Admin Main page
+    function goToAdminMain() {
+      window.location.href = "adminMAIN.html";
+    }
+
+    let bookingsData = [];
+    let actionBookings = [];
+
+    function formatDate(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      return isNaN(d) ? date : d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function statusBadge(status) {
+      const s = (status || 'Pending').toLowerCase();
+      return `<span class="status ${s}">${status || 'Pending'}</span>`;
+    }
+
+    async function loadBookings() {
+      try {
+        const resp = await fetch('http://localhost:3000/api/bookings');
+        bookingsData = await resp.json();
+        renderTable(bookingsData);
+      } catch (e) {
+        console.error(e);
+        showToast("Failed to load bookings.", "error");
+      }
+    }
+
+    function renderTable(data) {
+      const tbody = document.querySelector('.bookings-table-body');
+      tbody.innerHTML = '';
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#999;">No bookings found</td></tr>';
+        return;
+      }
+      data.forEach(b => {
+        if (b.status && (b.status.toLowerCase() === 'approved' || b.status.toLowerCase() === 'cancelled')) return;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td class="booking-id">${b._id}</td>
+          <td>${b.facility || 'N/A'}</td>
+          <td>${b.fullname || 'N/A'} (${b.email || ''})</td>
+          <td>${formatDate(b.bookingDate)}${b.startTime ? ' • ' + b.startTime : ''}${b.endTime ? '-' + b.endTime : ''}</td>
+          <td>
+            ${statusBadge(b.status)}
+          </td>
+          <td>
+            <button class="action-btn approve-btn" ${b.status === 'Approved' ? 'disabled' : ''}>Approve</button>
+            <button class="action-btn cancel-btn"  ${b.status === 'Cancelled' ? 'disabled' : ''}>Cancel</button>
+            <button class="action-btn view-btn">View</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+      bindBookingActions();
+    }
+
+    function bindBookingActions() {
+      document.querySelectorAll('.approve-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const row = btn.closest('tr');
+          const id  = row.querySelector('.booking-id').textContent;
+          const statusEl = row.querySelector('.status');
+          statusEl.textContent = 'Approved';
+          statusEl.className   = 'status approved';
+          btn.disabled = true;
+          row.querySelector('.cancel-btn').disabled = true;
+
+          const obj = bookingsData.find(x => x._id === id);
+          if (obj && !actionBookings.some(x => x._id === id)) {
+            actionBookings.push({ ...obj, status: 'Approved' });
+          } else if (obj) {
+            const idx = actionBookings.findIndex(x => x._id === id);
+            if (idx !== -1) actionBookings[idx] = { ...obj, status: 'Approved' };
+          }
+        });
+      });
+
+      document.querySelectorAll('.cancel-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const row = btn.closest('tr');
+          const id  = row.querySelector('.booking-id').textContent;
+          const reason = prompt('Please provide a reason for cancellation:');
+          if (!reason) return;
+          const statusEl = row.querySelector('.status');
+          statusEl.textContent = 'Cancelled';
+          statusEl.className   = 'status cancelled';
+          btn.disabled = true;
+          row.querySelector('.approve-btn').disabled = true;
+
+          const obj = bookingsData.find(x => x._id === id);
+          if (obj && !actionBookings.some(x => x._id === id)) {
+            actionBookings.push({ ...obj, status: 'Cancelled', cancellationReason: reason });
+          } else if (obj) {
+            const idx = actionBookings.findIndex(x => x._id === id);
+            if (idx !== -1) actionBookings[idx] = { ...obj, status: 'Cancelled', cancellationReason: reason };
+          }
+        });
+      });
+    }
+
+    function showToast(message, type = 'success', duration = 3000) {
+      const container = document.getElementById('toast-container');
+      const toast     = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => {
+        toast.classList.remove('show');
+        toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+      }, duration);
+    }
+
+    document.querySelector('.submit-btn').addEventListener('click', async () => {
+      if (actionBookings.length === 0) {
+        showToast("No actions to save.", "error");
+        return;
+      }
+      const payload = actionBookings.map(({ _id, ...rest }) => rest);
+      try {
+        const resp   = await fetch('http://localhost:3000/api/approve-bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookings: payload })
+        });
+        const result = await resp.json();
+        showToast(result.message || "Actions saved!");
+        // Remove acted bookings from the list and re-render
+        const actedIds = actionBookings.map(b => b._id);
+        bookingsData = bookingsData.filter(b => !actedIds.includes(b._id));
+        actionBookings = [];
+        renderTable(bookingsData);
+      } catch (e) {
+        console.error(e);
+        showToast("Error saving actions.", "error");
+      }
+    });
+
+    function applyFilters() {
+      let filtered = bookingsData.slice();
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const status = document.getElementById('statusFilter').value;
+      const facility = document.getElementById('facilityFilter').value;
+      if (search) {
+        filtered = filtered.filter(b =>
+          (b.fullname && b.fullname.toLowerCase().includes(search)) ||
+          (b.facility && b.facility.toLowerCase().includes(search)) ||
+          (b.email && b.email.toLowerCase().includes(search)) ||
+          (b.purpose && b.purpose.toLowerCase().includes(search))
+        );
+      }
+      if (status) {
+        filtered = filtered.filter(b => (b.status || 'Pending') === status);
+      }
+      if (facility) {
+        filtered = filtered.filter(b => (b.facility || '') === facility);
+      }
+      renderTable(filtered);
+    }
+
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    document.getElementById('facilityFilter').addEventListener('change', applyFilters);
+
+    loadBookings();
+  </script>
+</body>
+</html>

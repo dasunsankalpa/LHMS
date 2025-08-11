@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>User Dashboard - Lecture Hall Booking</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #e0e7ff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      position: relative;
+    }
+    .logout-btn {
+      position: absolute; top: 28px; right: 40px; padding: 9px 24px;
+      background: #ef4444; color: #fff; border: none; border-radius: 8px;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      transition: background 0.18s, box-shadow 0.2s; box-shadow: 0 2px 10px #ef444422; z-index: 1;
+    }
+    .logout-btn:hover { background: #be123c; box-shadow: 0 4px 20px #ef444430; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .header h1 { color: #2d3748; font-size: 2.5rem; margin-bottom: 10px; font-weight: 600; }
+    .header p { color: #718096; font-size: 1.1rem; }
+    .action-buttons { display: flex; gap: 15px; justify-content: center; margin-bottom: 40px; flex-wrap: wrap; }
+    .btn { padding: 12px 30px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1d4ed8; transform: translateY(-2px); box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3); }
+    .btn-secondary { background: #10b981; color: white; }
+    .btn-secondary:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3); }
+    .btn-accent { background: #8b5cf6; color: white; }
+    .btn-accent:hover { background: #7c3aed; transform: translateY(-2px); box-shadow: 0 10px 25px rgba(139, 92, 246, 0.3); }
+
+    .bookings-section { margin-top: 30px; }
+    .booking-card { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 15px; padding: 25px; margin-bottom: 20px; transition: all 0.3s ease; position: relative; overflow: hidden; }
+    .booking-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: #2563eb; }
+    .booking-card:hover { transform: translateY(-5px); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); border-color: #2563eb; }
+    .booking-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+    .booking-title { font-size: 1.25rem; font-weight: 600; color: #2563eb; }
+    .booking-details { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 15px; }
+    .detail-item { display: flex; align-items: center; gap: 8px; }
+    .detail-label { font-weight: 600; color: #4a5568; }
+    .detail-value { color: #718096; }
+    .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-approved { background: #d1fae5; color: #065f46; }
+    .status-pending { background: #fef3c7; color: #92400e; }
+
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px); }
+    .modal-content { background: white; margin: 5% auto; padding: 0; border-radius: 20px; width: 90%; max-width: 640px; max-height: 80vh; overflow-y: auto; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .modal-header { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: white; padding: 22px; border-radius: 20px 20px 0 0; text-align: center; position: relative; }
+    .modal-header h2 { font-size: 1.5rem; margin: 0; }
+    .close { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); color: white; font-size: 28px; font-weight: bold; cursor: pointer; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: background 0.3s ease; }
+    .close:hover { background: rgba(255, 255, 255, 0.2); }
+    .modal-body { padding: 18px 22px 26px; }
+
+    .schedule-header { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; }
+    .filter-input, .filter-select { padding: 9px 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; }
+    .schedule-item { background: #f8fafc; border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; border-left: 4px solid #2563eb; }
+    .schedule-item h3 { color: #2d3748; margin-bottom: 4px; font-size: 1.05rem; }
+    .schedule-time { color: #2563eb; font-weight: 600; margin-bottom: 2px; font-size: 0.95rem; }
+    .schedule-organizer { color: #718096; font-size: 0.9rem; }
+
+    .muted { color: #718096; }
+
+    .contact-form { display: flex; flex-direction: column; gap: 14px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label { font-weight: 600; color: #2d3748; font-size: 1rem; }
+    .form-select, .form-textarea {
+      padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 1rem; font-family: inherit;
+    }
+    .form-textarea { width: 100%; min-height: 140px; line-height: 1.45; resize: vertical; }
+
+    .contact-info { background: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 6px; border-left: 4px solid #8b5cf6; }
+    .contact-info h3 { color: #2d3748; margin-bottom: 8px; font-size: 1.05rem; }
+    .contact-info p { color: #1f2937; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+
+    .home-icon {
+      position: fixed; top: 20px; left: 20px; z-index: 1000; background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(10px); border-radius: 50%; width: 50px; height: 50px; display: flex;
+      align-items: center; justify-content: center; text-decoration: none; color: #2563eb; font-size: 1.5rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); transition: all 0.3s ease;
+    }
+    .home-icon:hover { background: rgba(37, 99, 235, 0.1); transform: translateY(-2px); box-shadow: 0 6px 25px rgba(37, 99, 235, 0.2); color: #1951bb; }
+    .home-icon svg { width: 24px; height: 24px; }
+
+    @media (max-width: 768px) {
+      .container { padding: 20px; margin: 10px; }
+      .logout-btn { right: 18px; top: 20px; }
+      .header h1 { font-size: 2rem; }
+      .action-buttons { flex-direction: column; align-items: center; }
+      .btn { width: 100%; max-width: 300px; }
+      .booking-details { grid-template-columns: 1fr; }
+      .modal-content { width: 95%; margin: 10% auto; }
+    }
+    @media (max-width: 540px) {
+      .home-icon { top: 15px; left: 15px; width: 45px; height: 45px; }
+      .home-icon svg { width: 20px; height: 20px; }
+      .logout-btn { right: 10px; top: 12px; padding: 7px 16px; font-size: .98rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Home navigation icon -->
+  <a href="index.html" class="home-icon" title="Go to Home Page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+      <polyline points="9,22 9,12 15,12 15,22"></polyline>
+    </svg>
+  </a>
+
+  <div class="container">
+    <button class="logout-btn" id="logoutBtn" title="Logout">Logout</button>
+    <div class="header">
+      <h1 id="userGreeting">Welcome!</h1>
+      <p>Manage your lecture hall bookings below</p>
+    </div>
+
+    <div class="action-buttons">
+      <button class="btn btn-primary" onclick="window.location.href='facilitiesVIEW.html'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="16"></line>
+          <line x1="8" y1="12" x2="16" y2="12"></line>
+        </svg>
+        Make New Booking
+      </button>
+      <button class="btn btn-secondary" onclick="openTimetableModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        Today's Timetable
+      </button>
+      <button class="btn btn-accent" onclick="openContactModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+        </svg>
+        Contact Admin
+      </button>
+    </div>
+
+    <div class="bookings-section" id="bookingsSection">
+      <h2 style="margin: 10px 0 12px; color:#2d3748;">Your Bookings</h2>
+      <div id="pendingList"><p class="muted">Loading…</p></div>
+      <h2 style="margin: 24px 0 12px; color:#2d3748;">Approved Bookings</h2>
+      <div id="approvedList"><p class="muted">Loading…</p></div>
+    </div>
+  </div>
+
+  <!-- Timetable Modal -->
+  <div id="timetableModal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+        <h2>Today's Schedule</h2>
+        <span class="close" onclick="closeTimetableModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="schedule-header">
+          <input id="ttFilterText" class="filter-input" type="text" placeholder="Search by title/organizer…" />
+          <select id="ttFacilitySelect" class="filter-select" title="Filter by facility">
+            <option value="">All facilities</option>
+          </select>
+        </div>
+        <div id="timetableList">
+          <p class="muted" id="ttLoading">Loading today’s timetable…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contact Admin Modal -->
+  <div id="contactModal" class="modal" aria-hidden="true">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Contact Administrator</h2>
+        <span class="close" onclick="closeContactModal()">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="contact-info">
+          <h3>Administrator Contact Information</h3>
+          <p>📧 Email: <a href="mailto:admin@university.edu">admin@university.edu</a></p>
+          <p>📞 Phone: <a href="tel:+15551234567">+1 (555) 123-4567</a></p>
+          <p>🏢 Office: Administration Building, Room 201</p>
+        </div>
+
+        <form class="contact-form" id="contactForm" onsubmit="handleContactSubmit(event)">
+          <div class="form-group">
+            <label for="contactSubject" class="form-label">Subject</label>
+            <select id="contactSubject" class="form-select" required>
+              <option value="">Please select a subject</option>
+              <option value="booking-issue">Booking Issue</option>
+              <option value="technical-support">Technical Support</option>
+              <option value="schedule-conflict">Schedule Conflict</option>
+              <option value="facility-problem">Facility Problem</option>
+              <option value="general-inquiry">General Inquiry</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="contactMessage" class="form-label">Message</label>
+            <textarea id="contactMessage" class="form-textarea" placeholder="Please describe your issue or inquiry in detail..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="contactPriority" class="form-label">Priority Level</label>
+            <select id="contactPriority" class="form-select" required>
+              <option value="">Select priority</option>
+              <option value="low">Low - General question</option>
+              <option value="medium">Medium - Non-urgent issue</option>
+              <option value="high">High - Urgent matter</option>
+              <option value="critical">Critical - Immediate attention required</option>
+            </select>
+          </div>
+
+          <button type="submit" id="contactSubmitBtn" class="btn btn-accent" style="align-self: flex-start;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+            </svg>
+            <span>Send Message</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ===================== CONFIG ===================== */
+    // Works for file:// and when hosting UI on a different port than backend.
+    const API_BASE = (location.protocol === 'file:') ? 'http://localhost:3000' : '';
+    const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // <- ensure this exists (fixes re-prompt loop)
+
+    /* ===================== INIT / AUTH ===================== */
+    document.addEventListener('DOMContentLoaded', function () {
+      const fullname = localStorage.getItem('lhms_fullname');
+      document.getElementById('userGreeting').textContent =
+        fullname ? `Welcome, ${fullname}!` : 'Welcome!';
+      loadInitial();
+    });
+
+    // Logout
+    document.getElementById('logoutBtn').onclick = function () {
+      localStorage.removeItem('lhms_loggedIn');
+      localStorage.removeItem('lhms_fullname');
+      localStorage.removeItem('lhms_role');
+      localStorage.removeItem('lhms_userId');
+      localStorage.removeItem('lhms_email');
+      window.location.href = 'index.html';
+    };
+
+    /* ===================== UTILITIES ===================== */
+    function isValidObjectId(str) { return typeof str === 'string' && /^[a-f\d]{24}$/i.test(str); }
+    function isValidEmail(str)    { return typeof str === 'string' && EMAIL_RX.test(str); }
+
+    async function fetchJSON(url) {
+      const res = await fetch(url, { cache: 'no-store' });
+      if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+      return res.json();
+    }
+
+    /* ===================== MODALS ===================== */
+    function openTimetableModal() {
+      const el = document.getElementById('timetableModal');
+      el.style.display = 'block';
+      el.setAttribute('aria-hidden', 'false');
+      loadTodayTimetable();
+    }
+    function closeTimetableModal() {
+      const el = document.getElementById('timetableModal');
+      el.style.display = 'none';
+      el.setAttribute('aria-hidden', 'true');
+    }
+    function openContactModal() {
+      const el = document.getElementById('contactModal');
+      el.style.display = 'block';
+      el.setAttribute('aria-hidden', 'false');
+    }
+    function closeContactModal() {
+      const el = document.getElementById('contactModal');
+      el.style.display = 'none';
+      el.setAttribute('aria-hidden', 'true');
+    }
+
+    /* ===================== CONTACT / COMPLAINT ===================== */
+    async function handleContactSubmit(event) {
+      event.preventDefault();
+
+      const btn  = document.getElementById('contactSubmitBtn');
+      const form = document.getElementById('contactForm');
+
+      const subject  = document.getElementById('contactSubject').value.trim();
+      const message  = document.getElementById('contactMessage').value.trim();
+      const priority = document.getElementById('contactPriority').value.trim();
+
+      if (!subject || !message || !priority) {
+        alert('Please complete all fields.');
+        return;
+      }
+
+      // Current identity (from login/localStorage)
+      let xUserId    = (localStorage.getItem('lhms_userId')   || '').trim();
+      let xUserEmail = (localStorage.getItem('lhms_email')    || '').trim();
+      let xUserName  = (localStorage.getItem('lhms_fullname') || '').trim();
+      let xUserRole  = (localStorage.getItem('lhms_role')     || '').trim();
+
+      // Friendly prompt fallback so admin sees a name/email to reply to
+      if (!xUserName) {
+        xUserName = (prompt('Please enter your name (so the admin can identify you):') || '').trim();
+        if (!xUserName) { alert('Name is required to send the message.'); return; }
+        localStorage.setItem('lhms_fullname', xUserName);
+      }
+      if (!xUserEmail || !isValidEmail(xUserEmail)) {
+        xUserEmail = (prompt('Please enter your email (so the admin can contact you):') || '').trim();
+        if (!isValidEmail(xUserEmail)) { alert('A valid email is required to send the message.'); return; }
+        localStorage.setItem('lhms_email', xUserEmail);
+      }
+
+      const payload = {
+        subject,
+        message,
+        priority,
+        user: {
+          id:    xUserId || null,
+          email: xUserEmail,
+          name:  xUserName,
+          role:  xUserRole || null
+        },
+        context: { page: location.pathname, ua: navigator.userAgent }
+      };
+
+      try {
+        btn.disabled = true;
+        btn.querySelector('span').textContent = 'Sending…';
+
+        const res = await fetch(`${API_BASE}/api/complains`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Server trusts these headers to attach identity (server extracts headers; see server.js)
+            'x-user-id':    xUserId,
+            'x-user-email': xUserEmail,
+            'x-user-name':  xUserName,
+            'x-user-role':  xUserRole
+          },
+          cache: 'no-store',
+          body: JSON.stringify(payload)
+        });
+
+        const raw = await res.text();
+        if (!res.ok) {
+          let msg = raw;
+          try { msg = JSON.parse(raw)?.error || raw; } catch {}
+          throw new Error(`HTTP ${res.status} – ${msg}`);
+        }
+
+        let info = {};
+        try { info = JSON.parse(raw); } catch {}
+        alert(`Thanks! Your message has been sent to the admin.${info?.id ? `\nReference: ${info.id}` : ''}`);
+        form.reset();
+        closeContactModal();
+      } catch (e) {
+        console.error('Contact submit failed:', e);
+        alert(`Sorry — could not send your message.\n${e.message}`);
+      } finally {
+        btn.disabled = false;
+        btn.querySelector('span').textContent = 'Send Message';
+      }
+    }
+
+    /* ===================== BOOKINGS LISTS ===================== */
+    function bookingCard(item, statusClass, statusText) {
+      const bookingDate = item.bookingDate ? new Date(item.bookingDate).toLocaleDateString() : 'Not specified';
+      const startTime   = item.startTime || '--:--';
+      const endTime     = item.endTime   || '--:--';
+      const purpose     = item.purpose   || 'No purpose specified';
+      const facility    = item.facility  || 'Facility';
+      return `
+        <div class="booking-card" data-id="${item._id}">
+          <div class="booking-header">
+            <h3 class="booking-title">${facility}</h3>
+            <span class="status-badge ${statusClass}">${statusText}</span>
+          </div>
+          <div class="booking-details">
+            <div class="detail-item">
+              <span class="detail-label">Date:</span>
+              <span class="detail-value">${bookingDate}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Time:</span>
+              <span class="detail-value">${startTime} - ${endTime}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Purpose:</span>
+              <span class="detail-value">${purpose}</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function renderLists(pending, approved) {
+      const pend = document.getElementById('pendingList');
+      const appr = document.getElementById('approvedList');
+      pend.innerHTML = pending.length
+        ? pending.map(b => bookingCard(b, 'status-pending', 'Pending Approval')).join('')
+        : '<p class="muted">No pending bookings.</p>';
+      appr.innerHTML = approved.length
+        ? approved.map(b => bookingCard(b, 'status-approved', 'Approved')).join('')
+        : '<p class="muted">No approved bookings.</p>';
+    }
+
+    async function refreshLists(q) {
+      try {
+        const [pending, approved] = await Promise.all([
+          fetchJSON(`${API_BASE}/api/my-bookings?${q}`),
+          fetchJSON(`${API_BASE}/api/approved-bookings?${q}`)
+        ]);
+        renderLists(pending, approved);
+      } catch (error) {
+        console.error('Error refreshing bookings:', error);
+        document.getElementById('pendingList').innerHTML =
+          '<p style="color:#ef4444">Error loading bookings. Please refresh the page.</p>';
+      }
+    }
+
+    /* ===================== TODAY'S TIMETABLE ===================== */
+    let lastTodayRows = [];
+    function escapeHtml(s) {
+      return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function renderTodaySchedule(rows) {
+      const list = document.getElementById('timetableList');
+      const sel  = document.getElementById('ttFacilitySelect');
+      const text = document.getElementById('ttFilterText');
+
+      const facilities = Array.from(new Set(rows.map(r => r.facility).filter(Boolean))).sort();
+      const selected = sel.value;
+      sel.innerHTML = `<option value="">All facilities</option>` +
+        facilities.map(f => `<option value="${escapeHtml(f)}"${selected===f?' selected':''}>${escapeHtml(f)}</option>`).join('');
+
+      const needle = (text.value || '').trim().toLowerCase();
+      const fac    = sel.value || '';
+      const filtered = rows.filter(r => {
+        const matchFac = !fac || r.facility === fac;
+        const matchTxt = !needle ||
+          (String(r.title||'').toLowerCase().includes(needle)) ||
+          (String(r.organizer||'').toLowerCase().includes(needle));
+        return matchFac && matchTxt;
+      });
+
+      if (filtered.length === 0) {
+        list.innerHTML = `<p class="muted">No bookings scheduled for today.</p>`;
+        return;
+      }
+      list.innerHTML = filtered.map(r => `
+        <div class="schedule-item">
+          <h3>${escapeHtml(r.title || 'Booked')}</h3>
+          <div class="schedule-time">${escapeHtml(r.startTime || '')} – ${escapeHtml(r.endTime || '')}</div>
+          <div class="schedule-organizer">
+            <strong>Organizer:</strong> ${escapeHtml(r.organizer || '—')}
+            &nbsp;&nbsp; <span class="muted">(${escapeHtml(r.facility || '—')})</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function loadTodayTimetable() {
+      const sel  = document.getElementById('ttFacilitySelect');
+      const text = document.getElementById('ttFilterText');
+      const list = document.getElementById('timetableList');
+      list.innerHTML = `<p class="muted" id="ttLoading">Loading today’s timetable…</p>`;
+      try {
+        // If you don't have this endpoint yet, the UI will just show an error (safe).
+        const rows = await fetchJSON(`${API_BASE}/api/today-timetable`);
+        lastTodayRows = rows || [];
+        renderTodaySchedule(lastTodayRows);
+      } catch (e) {
+        console.error('Failed to load today timetable', e);
+        list.innerHTML = `<p style="color:#ef4444">Failed to load today’s timetable.</p>`;
+      }
+      if (!sel.dataset.bound)  { sel.addEventListener('change', () => renderTodaySchedule(lastTodayRows)); sel.dataset.bound = '1'; }
+      if (!text.dataset.bound) { text.addEventListener('input',  () => renderTodaySchedule(lastTodayRows)); text.dataset.bound = '1'; }
+    }
+
+    /* ===================== SSE (BOOKINGS) ===================== */
+    let es = null; let reconnectTimer = null;
+    function setupEventSource(q) {
+      if (es) return;
+      const url = `${API_BASE}/api/stream/bookings?${q}`;
+      es = new EventSource(url);
+      es.onmessage = () => {
+        refreshLists(q);
+        const open = document.getElementById('timetableModal').getAttribute('aria-hidden') === 'false';
+        if (open) loadTodayTimetable();
+      };
+      es.onerror = () => {
+        console.warn('SSE disconnected. Reconnecting in 5s...');
+        if (es) { es.close(); es = null; }
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => setupEventSource(q), 5000);
+      };
+      window.addEventListener('beforeunload', () => { if (es) es.close(); }, { once: true });
+    }
+
+    /* ===================== INITIAL LOAD ===================== */
+    async function loadInitial() {
+      const rawId    = localStorage.getItem('lhms_userId');
+      const rawEmail = localStorage.getItem('lhms_email');
+      const ownerId  = isValidObjectId(rawId) ? rawId : null;
+      const email    = isValidEmail(rawEmail) ? rawEmail : null;
+
+      if (!ownerId && !email) {
+        console.error('No valid user ID or email in localStorage');
+        document.getElementById('pendingList').innerHTML  =
+          '<p class="muted">Not signed in. Please log in to see your bookings.</p>';
+        document.getElementById('approvedList').innerHTML =
+          '<p class="muted">Not signed in. Please log in to see your bookings.</p>';
+        return;
+      }
+
+      const q = ownerId
+        ? `ownerId=${encodeURIComponent(ownerId)}`
+        : `email=${encodeURIComponent(email)}`;
+
+      await refreshLists(q);
+      setupEventSource(q);
+    }
+  </script>
+</body>
+</html>

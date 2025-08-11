@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LHMS - Booking History</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #f5f7fa;
+      color: #333;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 30px;
+    }
+    .table-container {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+    th {
+      background: #3498db;
+      color: white;
+      padding: 12px 8px;
+      text-align: left;
+      font-weight: bold;
+    }
+    td {
+      padding: 10px 8px;
+      border-bottom: 1px solid #eee;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    tr:hover {
+      background-color: #f0f8ff;
+    }
+    .status {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      text-align: center;
+      display: inline-block;
+      min-width: 60px;
+    }
+    .approved { background: #d4edda; color: #155724; }
+    .cancelled { background: #f8d7da; color: #721c24; }
+    .pending { background: #fff3cd; color: #856404; }
+    .completed { background: #cce5ff; color: #004085; }
+    @media (max-width: 768px) {
+      .container { padding: 15px; }
+      th, td { padding: 8px 4px; font-size: 14px; }
+      .status { min-width: 50px; font-size: 11px; }
+    }
+    .search-bar {
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .search-bar input,
+    .search-bar select {
+      padding: 8px 12px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 15px;
+    }
+    .search-bar button {
+      padding: 8px 16px;
+      border-radius: 4px;
+      border: none;
+      background: #3498db;
+      color: #fff;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    .search-bar button:hover {
+      background: #2980b9;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Booking History</h1>
+
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search name, facility, or email...">
+      <select id="statusFilter">
+        <option value="">All Status</option>
+        <option value="Approved">Approved</option>
+        <option value="Cancelled">Cancelled</option>
+      </select>
+      <select id="facilityFilter">
+        <option value="">All Facilities</option>
+        <option value="Lecture Hall">Lecture Hall</option>
+        <option value="Computer Lab">Computer Lab</option>
+        <option value="Seminar Hall">Seminar Hall</option>
+      </select>
+      <button onclick="applyFilters()">Search</button>
+    </div>
+
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Facility</th>
+            <th>Name</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>People</th>
+            <th>Purpose</th>
+            <th>Status</th>
+            <th>Action By</th>
+            <th>Action At</th>
+          </tr>
+        </thead>
+        <tbody id="bookings">
+          <!-- Data loads here -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <script>
+    let bookingHistory = [];
+    function formatDate(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      return isNaN(d) ? date : d.toLocaleDateString('en-GB');
+    }
+    function formatDateTime(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      return isNaN(d) ? date : d.toLocaleDateString('en-GB') + ' ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+    function getStatus(status) {
+      const s = (status || 'pending').toLowerCase();
+      let display = '';
+      let cls = '';
+      if (s === 'approved') { display = 'APPROVED'; cls = 'approved'; }
+      else if (s === 'cancelled') { display = 'CANCELLED'; cls = 'cancelled'; }
+      else if (s === 'completed') { display = 'COMPLETED'; cls = 'completed'; }
+      else { display = status || 'PENDING'; cls = 'pending'; }
+      return `<span class="status ${cls}">${display}</span>`;
+    }
+    function createRow(booking, index) {
+      const id = booking._id ? booking._id.slice(-4).toUpperCase() : index.toString().padStart(4, '0');
+      const time = booking.startTime && booking.endTime ? `${booking.startTime}-${booking.endTime}` : (booking.startTime || '');
+      return `
+        <tr>
+          <td>#${id}</td>
+          <td>${booking.facility || ''}</td>
+          <td>${booking.fullname || ''} (${booking.email || ''})</td>
+          <td>${formatDate(booking.bookingDate)}</td>
+          <td>${time}</td>
+          <td>${booking.participants || ''}</td>
+          <td>${booking.purpose || ''}</td>
+          <td>${getStatus(booking.status)}</td>
+          <td>${booking.actionBy || ''}</td>
+          <td>${formatDateTime(booking.actionAt || booking.updatedAt || booking.createdAt)}</td>
+        </tr>
+      `;
+    }
+    async function getBookingHistory() {
+      try {
+        const response = await fetch('http://localhost:3000/api/booking-history');
+        return response.ok ? await response.json() : [];
+      } catch (error) {
+        console.error('Error:', error);
+        return [];
+      }
+    }
+    function renderTable(data) {
+      const tbody = document.getElementById('bookings');
+      if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#999;">No booking history found</td></tr>';
+      } else {
+        tbody.innerHTML = data.map(createRow).join('');
+      }
+    }
+    function applyFilters() {
+      let filtered = bookingHistory.slice();
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const status = document.getElementById('statusFilter').value;
+      const facility = document.getElementById('facilityFilter').value;
+      if (search) {
+        filtered = filtered.filter(b =>
+          (b.fullname && b.fullname.toLowerCase().includes(search)) ||
+          (b.facility && b.facility.toLowerCase().includes(search)) ||
+          (b.email && b.email.toLowerCase().includes(search)) ||
+          (b.purpose && b.purpose.toLowerCase().includes(search))
+        );
+      }
+      if (status) {
+        filtered = filtered.filter(b => (b.status || '').toLowerCase() === status.toLowerCase());
+      }
+      if (facility) {
+        filtered = filtered.filter(b => (b.facility || '') === facility);
+      }
+      renderTable(filtered);
+    }
+    async function loadData() {
+      bookingHistory = await getBookingHistory();
+      renderTable(bookingHistory);
+    }
+    document.getElementById('searchInput').addEventListener('input', applyFilters);
+    document.getElementById('statusFilter').addEventListener('change', applyFilters);
+    document.getElementById('facilityFilter').addEventListener('change', applyFilters);
+    document.addEventListener('DOMContentLoaded', loadData);
+  </script>
+</body>
+</html>

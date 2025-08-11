@@ -1,0 +1,578 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>LHMS - Facility Timetable</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        background: #e6eaff;
+        color: #333;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        font-size: 17px;
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        background: #e0e7ff;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+        padding: 22px 10px 18px 10px;
+        min-height: 100vh;
+      }
+      h1 {
+        text-align: center;
+        color: #2c3e50;
+        margin-bottom: 10px;
+        font-size: 2.1rem;
+        font-weight: bold;
+        letter-spacing: 1.2px;
+      }
+      .subtitle { text-align: center; color: #666; margin-bottom: 18px; font-size: 1.03rem; }
+
+      .facility-selector {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .facility-btn {
+        padding: 6px 12px;
+        background: #f8f9fa;
+        border: 1.3px solid #d2d9e9;
+        border-radius: 7px;
+        cursor: pointer;
+        font-size: 0.95rem;
+        min-width: 90px;
+        max-width: 240px;
+        text-align: center;
+        font-weight: 500;
+        word-break: break-word;
+        white-space: normal;
+        transition: all 0.14s;
+        box-shadow: 0 1px 4px #dae3f533;
+      }
+      .facility-btn:hover, .facility-btn:focus {
+        background: #e2f1ff;
+        border-color: #8ec3ff;
+        color: #1564b3;
+        outline: none;
+      }
+      .facility-btn.active {
+        background: linear-gradient(90deg,#2494fa 70%,#3bb5ff 100%);
+        color: #fff;
+        border: 2px solid #176dcc;
+        font-weight: bold;
+        box-shadow: 0 4px 14px #57baff17;
+        transform: scale(1.04);
+        z-index: 2;
+      }
+      /* My Bookings Button Styling */
+.my-bookings-btn {
+  background: linear-gradient(135deg, #6f42c1 0%, #8e44ad 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(111, 66, 193, 0.3);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.my-bookings-btn:hover {
+  background: linear-gradient(135deg, #5a2c8a 0%, #732d91 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(111, 66, 193, 0.4);
+}
+.my-bookings-btn:active {
+  transform: translateY(0);
+}
+
+/* Mobile responsive adjustment - add this to your existing @media query */
+@media (max-width: 600px) {
+  .my-bookings-btn { 
+    padding: 8px 16px; 
+    font-size: 0.9rem; 
+  }
+}
+
+      .week-navigation { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; }
+      .nav-btn { background: #007bff; color: white; border: none; border-radius: 6px; padding: 7px 16px; cursor: pointer; font-size: 0.99rem; }
+      .nav-btn:hover:not([disabled]) { background: #0056b3; }
+      .nav-btn[disabled] { background: #ccc; cursor: not-allowed; }
+      .current-week { font-weight: bold; color: #222; font-size: 1.04rem; margin: 0 8px; }
+
+      .admin-controls {
+        display:flex;gap:10px;justify-content:center;align-items:center;margin:10px 0 16px;
+        flex-wrap: wrap;
+      }
+      .admin-controls input[type="password"] {
+        padding:6px 10px;border:1px solid #ccc;border-radius:6px;min-width:260px;
+      }
+      .pill {
+        display:inline-flex;align-items:center;gap:8px;border:1px solid #cdd7ff;background:#f7f9ff;padding:8px 12px;border-radius:999px;font-size:.95rem;
+      }
+      .legend { display: flex; justify-content: center; gap: 16px; margin-bottom: 10px; }
+      .legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.99rem; }
+      .legend-color { width: 16px; height: 16px; border-radius: 3px; border: 1px solid #ddd; }
+      .viewonly-color { background: #f8f9fa; }
+      .selected-color { background: #28a745; }
+
+      .timetable-container { overflow-x: auto; }
+      .timetable { width: 100%; border-collapse: collapse; background: white; border: 1px solid #ddd; }
+      .timetable th { background: #f8f9fa; color: #333; font-weight: bold; padding: 8px 6px; text-align: center; border: 1px solid #ddd; font-size: 0.98rem; }
+      .timetable td { border: 1px solid #ddd; text-align: center; padding: 8px 6px; min-width: 55px; height: 32px; font-size: 0.98rem; background: #f8f9fa; color: #666; cursor: pointer; }
+      .timetable td.selected { background: #28a745; color: white; font-weight: bold; }
+      .timetable td.booked { background: #e74c3c; color: white; font-weight: bold; cursor: not-allowed !important; }
+      .timetable td:hover:not(.selected):not(.booked) { background: #e9ecef; }
+      .time-col { background: #f1f3f4 !important; font-weight: bold !important; color: #333 !important; cursor: default !important; }
+
+      .actions {
+        display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap;
+      }
+      .btn {
+        border: none; border-radius: 6px; padding: 9px 22px; font-size: 0.99rem; cursor: pointer;
+      }
+      .btn-primary { background:#28a745; color:#fff; }
+      .btn-primary:hover { background:#218838; }
+      .btn-secondary { background:#f0f3ff;border:1px solid #cdd7ff; }
+      .btn-secondary:hover { background:#e8edff; }
+      .btn:disabled { background: #ccc; cursor: not-allowed; color:#666; border-color:#ccc; }
+
+      @media (max-width: 600px) {
+        .container { padding: 2px; }
+        .facility-selector { gap: 6px;}
+        .facility-btn { font-size: 0.9rem; min-width: 70px; max-width: 98vw; padding: 4px 8px;}
+        .timetable th, .timetable td { min-width: 35px; font-size: 0.93rem; padding: 5px 2px; }
+      }
+    </style>
+  </head>
+  <body>
+  <div class="container">
+    <h1>Facility Timetable</h1>
+    <div class="subtitle">Select 1–9 adjacent slots in a day (users). Admins can select across multiple days and times.</div>
+
+    <div class="facility-selector" id="facility-selector"></div>
+
+    <div class="week-navigation">
+      <button class="nav-btn" id="prev-week">Previous Week</button>
+      <span class="current-week" id="week-label"></span>
+      <button class="nav-btn" id="this-week">This Week</button>
+      <button class="nav-btn" id="next-week">Next Week</button>
+    </div>
+
+    <!-- Admin controls -->
+    
+    <div class="admin-controls">
+  <label class="pill">
+    <input type="checkbox" id="admin-mode" />
+    <strong>Admin multi-select mode</strong>
+  </label>
+  <input id="admin-key" type="password" placeholder="Admin API key" style="display:none;" />
+  <button class="btn btn-secondary" id="clear-selection" title="Clear all selected cells">Clear Selection</button>
+  <a href="user.html" class="my-bookings-btn">
+    📅 My Bookings
+  </a>
+</div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-color viewonly-color"></div>
+        <span>Available</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color selected-color"></div>
+        <span>Selected</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background:#e74c3c;"></div>
+        <span>Booked</span>
+      </div>
+    </div>
+
+    <div class="timetable-container" id="timetable-container"></div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="book-selected-btn" disabled>Book Selected Slots</button>
+    </div>
+  </div>
+
+  <script>
+  /* ========= CONFIG ========= */
+  const API = 'http://localhost:3000';
+  const times = [
+    "8.00-9.00", "9.00-10.00", "10.00-11.00", "11.00-12.00",
+    "12.00-13.00", "13.00-14.00", "14.00-15.00", "15.00-16.00", "16.00-17.00"
+  ];
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  /* ========= STATE ========= */
+  let facilities = [];
+  let selectedFacility = '';
+  let selectedFacilityLabel = '';
+  let selectedWeekOffset = 0;
+  let currentSelectedCells = [];
+  let bookedSlots = {};
+
+  /* ========= HELPERS ========= */
+  function getSelectedFacilityFromURL() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('facility') ? decodeURIComponent(params.get('facility')).trim().toLowerCase() : '';
+  }
+  let facilityParam = getSelectedFacilityFromURL();
+
+  function normalizeTime(time) {
+    let t = time.replace(/\+-\+| - | -|- |-/g, "-");
+    t = t.replace(/:/g, ".");
+    t = t.replace(/\s/g, "");
+    return t;
+  }
+  async function fetchFacilities() {
+    const res = await fetch(API + '/api/facilities');
+    return res.json();
+  }
+  function getMonday(date) {
+    const d = new Date(date);
+    const day = d.getDay(), diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    return new Date(d.setDate(diff));
+  }
+  function addDays(date, days) {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  }
+  function formatDate(date) {
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+  function toISODate(date) {
+    return date.toISOString().slice(0,10);
+  }
+
+  /* IMPORTANT: match server naming (keep () and dashes; only remove spaces) */
+  function getTimetableCollectionName(facilityName) {
+    return facilityName.trim().replace(/\s+/g, '').toLowerCase() + '_timetable';
+  }
+
+  async function loadBookedSlots() {
+    if (!selectedFacility) return;
+    bookedSlots = {};
+    const weekDates = getWeekDates(selectedWeekOffset);
+    const startISO = toISODate(weekDates[0]);
+    const endISO = toISODate(weekDates[6]);
+    const collection = getTimetableCollectionName(selectedFacilityLabel);
+    const url = `${API}/api/timetable/${encodeURIComponent(collection)}?start=${startISO}&end=${endISO}`;
+    const res = await fetch(url, { headers: { 'Cache-Control': 'no-store' } });
+    if (!res.ok) {
+      bookedSlots = {};
+      return;
+    }
+    const data = await res.json();
+    (data || []).forEach(slot => {
+      if (!bookedSlots[slot.date]) bookedSlots[slot.date] = {};
+      bookedSlots[slot.date][normalizeTime(slot.time)] = slot;
+    });
+  }
+
+  function getCurrentWeekMonday() { return getMonday(new Date()); }
+  function getWeekDates(weekOffset) {
+    const mon = getCurrentWeekMonday();
+    const base = addDays(mon, weekOffset*7);
+    return [...Array(7)].map((_,i)=> addDays(base,i));
+  }
+  function updateWeekNav() {
+    const weekDates = getWeekDates(selectedWeekOffset);
+    const start = formatDate(weekDates[0]);
+    const end = formatDate(weekDates[6]);
+    document.getElementById('week-label').textContent = `${start} - ${end}`;
+    document.getElementById('prev-week').disabled = (selectedWeekOffset===-1);
+    document.getElementById('this-week').disabled = (selectedWeekOffset===0);
+    document.getElementById('next-week').disabled = (selectedWeekOffset===1);
+  }
+  function clearSelectedCells() {
+    currentSelectedCells.forEach(td => td.classList.remove('selected'));
+    currentSelectedCells = [];
+    document.getElementById('book-selected-btn').disabled = true;
+  }
+
+  /* Check adjacency for normal users */
+  function isAdjacentInColumn(selectedCells, newCell) {
+    const allRows = selectedCells.map(td => +td.dataset.rowIndex);
+    allRows.push(+newCell.dataset.rowIndex);
+    allRows.sort((a,b)=>a-b);
+    for(let i=1;i<allRows.length;i++) if(allRows[i]-allRows[i-1]!==1) return false;
+    return true;
+  }
+
+  /* ========= RENDER ========= */
+  async function renderTable() {
+    clearSelectedCells();
+    await loadBookedSlots();
+    const weekDates = getWeekDates(selectedWeekOffset);
+    let html = `<table class="timetable"><thead><tr><th>Time</th>`;
+    for(let i=0;i<7;i++) html += `<th>${days[i]}<br><span style="font-weight:normal;font-size:.85em;">${formatDate(weekDates[i])}</span></th>`;
+    html += `</tr></thead><tbody>`;
+    for(let t=0;t<times.length;t++) {
+      html += `<tr>`;
+      html += `<td class="time-col">${times[t]}</td>`;
+      for(let d=0;d<7;d++) {
+        const isoDate = toISODate(weekDates[d]);
+        const slotObj = bookedSlots[isoDate] && bookedSlots[isoDate][normalizeTime(times[t])];
+        const isBooked = !!slotObj;
+        html += `<td class="viewonly${isBooked?' booked':''}" data-row-index="${t}" data-col-index="${d}" data-day="${days[d]}" data-date="${formatDate(weekDates[d])}" data-isodate="${isoDate}" data-time="${times[t]}" ${isBooked?'':'tabindex="0"'}></td>`;
+      }
+      html += `</tr>`;
+    }
+    html += `</tbody></table>`;
+    document.getElementById('timetable-container').innerHTML = html;
+
+    const adminModeCheckbox = document.getElementById('admin-mode');
+
+    // Click handler for AVAILABLE cells (select for booking)
+    document.querySelectorAll('.timetable td.viewonly:not(.booked)').forEach(td => {
+      td.onclick = function() {
+        const adminMode = adminModeCheckbox.checked;
+
+        // If already selected, toggle off
+        if (td.classList.contains('selected')) {
+          td.classList.remove('selected');
+          currentSelectedCells = currentSelectedCells.filter(c => c !== td);
+          document.getElementById('book-selected-btn').disabled = (currentSelectedCells.length===0);
+          return;
+        }
+
+        if (!adminMode) {
+          // ==== NORMAL USER RULES ====
+          const col = +td.dataset.colIndex; // must be same day (same column)
+          if (currentSelectedCells.length > 0 && +currentSelectedCells[0].dataset.colIndex !== col) {
+            alert("You can only select slots on the same day.");
+            return;
+          }
+          if (currentSelectedCells.length === 9) {
+            alert("Maximum 9 adjacent slots can be selected.");
+            return;
+          }
+          if (currentSelectedCells.length > 0 && !isAdjacentInColumn(currentSelectedCells, td)) {
+            alert("Selections must be adjacent in the day.");
+            return;
+          }
+        } // in adminMode: no adjacency/same-day limit
+
+        td.classList.add('selected');
+        currentSelectedCells.push(td);
+        document.getElementById('book-selected-btn').disabled = false;
+      };
+    });
+
+    // === BOOKED (red) cells — attach release handler ONLY when Admin mode is ON ===
+    if (adminModeCheckbox.checked) {
+      document.querySelectorAll('.timetable td.booked').forEach(td => {
+        td.onclick = async function () {
+          const adminKey = document.getElementById('admin-key')?.value.trim() || '';
+          if (!adminKey) {
+            alert('Please enter the admin key before releasing a slot.');
+            return;
+          }
+
+          const iso = td.dataset.isodate;                  // e.g. 2025-08-06
+          const timeNorm = normalizeTime(td.dataset.time); // e.g. 10.00-11.00
+          const collection = getTimetableCollectionName(selectedFacilityLabel);
+
+          if (!confirm(`Release this slot?\n${selectedFacilityLabel}\n${iso} • ${timeNorm}`)) return;
+
+          try {
+            const res = await fetch(`${API}/api/timetable/${encodeURIComponent(collection)}`, {
+              method: 'DELETE',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-admin-key': adminKey // must match server .env ADMIN_API_KEY
+              },
+              body: JSON.stringify({ date: iso, time: timeNorm })
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(()=>({}));
+              alert('Failed to release slot: ' + (err.error || err.message || res.statusText));
+              return;
+            }
+            await renderTable(); // refresh grid after release
+          } catch (e) {
+            console.error(e);
+            alert('Network error while releasing slot');
+          }
+        };
+      });
+    }
+  }
+
+  /* ========= FACILITY PICKER ========= */
+  async function initFacilitySelector() {
+    facilities = await fetchFacilities();
+    const facilitySelector = document.getElementById("facility-selector");
+    facilitySelector.innerHTML = '';
+    let initialSelectedIdx = 0;
+    let facilityParamLower = (facilityParam || '').toLowerCase();
+
+    for (let i = 0; i < facilities.length; i++) {
+      if ((facilities[i].facilityName || '').trim().toLowerCase() === facilityParamLower) {
+        initialSelectedIdx = i;
+        break;
+      }
+    }
+
+    facilities.forEach((fac, idx) => {
+      const btn = document.createElement("button");
+      btn.textContent = fac.facilityName;
+      btn.className = "facility-btn" + (idx === initialSelectedIdx ? " active" : "");
+      btn.dataset.facility = fac.facilityName;
+      facilitySelector.appendChild(btn);
+      if (idx === initialSelectedIdx) {
+        selectedFacilityLabel = fac.facilityName;
+        selectedFacility = fac.facilityName;
+      }
+      btn.onclick = async ()=> {
+        document.querySelectorAll('.facility-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedFacilityLabel = fac.facilityName;
+        selectedFacility = fac.facilityName;
+        await renderTable();
+      };
+    });
+
+    await renderTable();
+  }
+
+  /* ========= NAV + ACTIONS ========= */
+  document.getElementById('prev-week').onclick = async ()=>{selectedWeekOffset=-1; updateWeekNav(); await renderTable();};
+  document.getElementById('this-week').onclick = async ()=>{selectedWeekOffset=0; updateWeekNav(); await renderTable();};
+  document.getElementById('next-week').onclick = async ()=>{selectedWeekOffset=1; updateWeekNav(); await renderTable();};
+
+  document.getElementById('clear-selection').onclick = ()=> {
+    clearSelectedCells();
+  };
+
+  document.getElementById('admin-mode').addEventListener('change', async () => {
+    const keyInput = document.getElementById('admin-key');
+    keyInput.style.display = document.getElementById('admin-mode').checked ? 'block' : 'none';
+    document.getElementById('book-selected-btn').textContent =
+      document.getElementById('admin-mode').checked ? 'Book Selected Slots (Admin Bulk)' : 'Book Selected Slots';
+    clearSelectedCells(); // reset selections when toggling mode
+    await renderTable();  // re-render so red-cell handlers attach/detach correctly
+  });
+
+  /* ========= BOOK ACTION ========= */
+  document.getElementById('book-selected-btn').onclick = async function() {
+    if (currentSelectedCells.length===0) return;
+
+    const adminMode = document.getElementById('admin-mode').checked;
+    const collection = getTimetableCollectionName(selectedFacilityLabel);
+    const tds = currentSelectedCells.sort((a,b)=> +a.dataset.colIndex - +b.dataset.colIndex || +a.dataset.rowIndex - +b.dataset.rowIndex);
+
+    if (!adminMode) {
+      // ==== NORMAL USER: go to booking form page with same-day slots ====
+      const date = tds[0].dataset.date;
+      const timesArr = tds.map(td=> normalizeTime(td.dataset.time));
+      const params = new URLSearchParams();
+      params.append("facility", encodeURIComponent(selectedFacilityLabel));
+      params.append("date", encodeURIComponent(date));
+      timesArr.forEach(time=> params.append("times[]", time));
+      window.location.href = `bookingLH.html?${params.toString()}`;
+      return;
+    }
+
+    // ==== ADMIN MODE: bulk-book ====
+    const byDate = new Map();
+    for (const td of tds) {
+      const iso = td.dataset.isodate;
+      const normalized = normalizeTime(td.dataset.time);
+      if (!byDate.has(iso)) byDate.set(iso, new Set());
+      byDate.get(iso).add(normalized);
+    }
+    const entries = Array.from(byDate.entries()).map(([date, set]) => ({
+      date, times: Array.from(set)
+    }));
+
+    const adminKey = document.getElementById('admin-key').value.trim();
+    if (!adminKey) {
+      alert('Admin API key required');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API}/api/timetable/${encodeURIComponent(collection)}/bulk`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey
+        },
+        body: JSON.stringify({
+          entries,
+          bookedBy: 'admin',
+          bookingId: 'bulk-admin'
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(()=>({error:'Unknown error'}));
+        alert('Bulk booking failed: ' + (err.error || res.statusText));
+        return;
+      }
+      alert('Bulk slots booked!');
+      await renderTable(); // refresh booked/selected state
+      clearSelectedCells();
+    } catch (e) {
+      console.error(e);
+      alert('Network error while bulk booking');
+    }
+  };
+
+  /* ========= INIT ========= */
+  window.addEventListener('DOMContentLoaded', async function() {
+    await initFacilitySelector();
+    updateWeekNav();
+    await renderTable();
+  });
+
+  async function loadBookedSlots() {
+    if (!selectedFacility) return;
+    bookedSlots = {};
+    const weekDates = getWeekDates(selectedWeekOffset);
+    const startISO = toISODate(weekDates[0]);
+    const endISO = toISODate(weekDates[6]);
+    const collection = getTimetableCollectionName(selectedFacilityLabel);
+
+    // Always try history (covers past weeks; status=Approved only)
+    let history = [];
+    try {
+      const urlH = `${API}/api/history-timetable?facility=${encodeURIComponent(selectedFacilityLabel)}&start=${startISO}&end=${endISO}&status=Approved`;
+      const resH = await fetch(urlH, { headers: { 'Cache-Control': 'no-store' } });
+      if (resH.ok) history = await resH.json();
+    } catch (_) {}
+
+    // For this week & future, also merge current timetable collection
+    let live = [];
+    try {
+      const urlL = `${API}/api/timetable/${encodeURIComponent(collection)}?start=${startISO}&end=${endISO}`;
+      const resL = await fetch(urlL, { headers: { 'Cache-Control': 'no-store' } });
+      if (resL.ok) live = await resL.json();
+    } catch (_) {}
+
+    const all = [...history, ...live];
+
+    all.forEach(slot => {
+      const iso = slot.date;
+      const timeNorm = normalizeTime(slot.time);
+      if (!bookedSlots[iso]) bookedSlots[iso] = {};
+      bookedSlots[iso][timeNorm] = slot;
+    });
+  }
+
+  </script>
+  </body>
+  </html>
