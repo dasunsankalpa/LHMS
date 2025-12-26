@@ -103,7 +103,8 @@
     }
     .signup-form input[type="text"], 
     .signup-form input[type="email"], 
-    .signup-form input[type="password"] {
+    .signup-form input[type="password"],
+    .signup-form select {
       font-size: 1rem;
       padding: 14px 16px;
       border: 1px solid rgba(200, 200, 200, 0.8);
@@ -113,7 +114,8 @@
       background: rgba(250, 251, 252, 0.8);
       backdrop-filter: blur(5px);
     }
-    .signup-form input:focus {
+    .signup-form input:focus,
+    .signup-form select:focus {
       border-color: #3498db;
       background: rgba(255, 255, 255, 0.9);
       box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
@@ -261,7 +263,7 @@
 
   <div class="signup-container">
     <div class="signup-title">Sign up</div>
-    <div class="signup-subtitle">Choose your account type and register</div>
+    <div class="signup-subtitle">Register as Faculty Union Member or Academic Staff</div>
     <!-- User Type Selection -->
     <div class="user-type-section">
       <div class="section-title">
@@ -273,12 +275,12 @@
         Select Account Type
       </div>
       <div class="section-description">
-        Choose whether you're registering as a student or academic staff member
+        Choose whether you're registering as a faculty union member or academic staff member
       </div>
       <form class="signup-form" autocomplete="off">
         <div class="user-type-row">
           <label>
-            <input type="radio" name="usertype" value="student" checked onclick="showStudentForm()"> Student
+            <input type="radio" name="usertype" value="union" checked onclick="showUnionForm()"> Faculty Union Member
           </label>
           <label>
             <input type="radio" name="usertype" value="staff" onclick="showStaffModal()"> Academic Staff
@@ -287,26 +289,36 @@
       </form>
     </div>
 
-    <!-- Student Registration Section -->
-    <div class="user-type-section" id="student-section">
+    <!-- Faculty Union Member Registration Section -->
+    <div class="user-type-section" id="union-section">
       <div class="section-title">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
           <path d="M6 12v5c3 3 9 3 12 0v-5"/>
         </svg>
-        Student Registration
+        Faculty Union Member Registration
       </div>
       <div class="section-description">
-        Complete the form below with your student information and required documents
+        Complete the form below with your information and required documents
       </div>
-      <form class="signup-form" id="studentForm" autocomplete="off" enctype="multipart/form-data">
+      <form class="signup-form" id="unionForm" autocomplete="off" enctype="multipart/form-data">
         <div class="form-group">
           <label for="signup-fullname">Full Name</label>
           <input id="signup-fullname" name="fullname" type="text" required>
         </div>
         <div class="form-group">
+          <label for="signup-faculty">Faculty Union</label>
+          <select id="signup-faculty" name="faculty" required>
+            <option value="">Select your faculty union</option>
+            <option value="applied">Faculty of Applied</option>
+            <option value="technology">Faculty of Technology</option>
+            <option value="business_studies">Faculty of Business Studies</option>
+            <option value="art">Faculty of Art</option>
+          </select>
+        </div>
+        <div class="form-group">
           <label for="signup-email">Email</label>
-          <input id="signup-email" name="email" type="email" placeholder="University email for students" required>
+          <input id="signup-email" name="email" type="email" placeholder="University email" required>
         </div>
         <div class="form-group">
           <label for="signup-password">Password</label>
@@ -324,7 +336,7 @@
           <label>ID Photo (Back)</label>
           <input type="file" name="idback" accept="image/*" required>
         </div>
-        <button class="register-btn" type="submit">Register as Student</button>
+        <button class="register-btn" type="submit">Register as Faculty Union Member</button>
         <div class="bottom-text">
           Already have an account? <a href="index.html?showLogin=1">login</a>
         </div>
@@ -383,9 +395,9 @@
     }
     function closeStaffModal() {
       document.getElementById('staffModal').style.display = 'none';
-      document.querySelector('input[name="usertype"][value="student"]').checked = true;
+      document.querySelector('input[name="usertype"][value="union"]').checked = true;
     }
-    function showStudentForm() {
+    function showUnionForm() {
       closeStaffModal();
     }
     window.onclick = function(event) {
@@ -393,17 +405,18 @@
       if (event.target === modal) closeStaffModal();
     };
 
-    // ---- STUDENT FORM SUBMIT ----
-    document.getElementById('studentForm').onsubmit = async function(e) {
+    // ---- FACULTY UNION MEMBER FORM SUBMIT ----
+    document.getElementById('unionForm').onsubmit = async function(e) {
       e.preventDefault();
       const fullname = document.getElementById('signup-fullname').value.trim();
+      const faculty = document.getElementById('signup-faculty').value;
       const email = document.getElementById('signup-email').value.trim();
       const password = document.getElementById('signup-password').value;
       const confirm = document.getElementById('signup-confirm').value;
       const idfront = document.querySelector('input[name="idfront"]').files[0];
       const idback = document.querySelector('input[name="idback"]').files[0];
-      if (!fullname || !email || !password || !confirm || !idfront || !idback) {
-        alert('Please fill all required fields and upload both ID photos.');
+      if (!fullname || !faculty || !email || !password || !confirm || !idfront || !idback) {
+        alert('Please fill all required fields, select your faculty union, and upload both ID photos.');
         return;
       }
       if (password.length < 8) { alert('Password must be at least 8 characters.'); return; }
@@ -412,13 +425,14 @@
       // Build FormData for file upload
       const formData = new FormData();
       formData.append("fullname", fullname);
+      formData.append("faculty", faculty);
       formData.append("email", email);
       formData.append("password", password);
       formData.append("idfront", idfront);
       formData.append("idback", idback);
 
       try {
-        const res = await fetch('http://localhost:3000/api/register/student', {
+        const res = await fetch('http://localhost:3000/api/register/union', {
           method: 'POST',
           body: formData
         });
@@ -430,7 +444,8 @@
           alert(result.message || 'Registration failed. Please try again.');
         }
       } catch (err) {
-        alert('Could not register. Try again.');
+        console.error('Union signup failed:', err);
+        alert('Could not register. ' + (err && err.message ? err.message : 'Try again.'));
       }
     };
 

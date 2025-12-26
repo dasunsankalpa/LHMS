@@ -9,7 +9,7 @@
         body { background: #f6f7fb; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .container { max-width: 1200px; margin: 30px auto; padding: 20px; }
         .header-bar {
-            background: #34495e;
+            background: #217dbb;
             color: #fff;
             padding: 16px 0 14px 0;
             margin-bottom: 36px;
@@ -25,7 +25,7 @@
         .go-home-btn {
             position: absolute;
             left: 22px; top: 22px;
-            background: none;
+            background: none;   
             border: none;
             color: #3498db;
             font-size: 1.12rem;
@@ -87,8 +87,10 @@
         .unavailable { background: #e74c3c;}
         .facility-actions {
             margin-top: auto;
-            text-align: right;
             padding-top: 16px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
         }
         .book-now-btn {
             background: #3498db;
@@ -101,7 +103,7 @@
             cursor: pointer;
             transition: background .18s, color .18s;
             box-shadow: 0 1px 5px rgba(46, 204, 113, .12);
-            min-width: 140px;
+            min-width: 120px;
         }
         .book-now-btn:hover {
             background: #27ae60;
@@ -164,6 +166,10 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Check if user is admin
+        const userRole = localStorage.getItem('lhms_role');
+        const isAdmin = (userRole === 'admin');
+
         fetch('http://localhost:3000/api/facilities')
             .then(res => res.json())
             .then(facilities => {
@@ -201,7 +207,7 @@
                     const location = fac.location ? `<span class="facility-location">${fac.location}</span>` : '';
                     // Render card
                     container.insertAdjacentHTML('beforeend', `
-                        <div class="facility-card">
+                        <div class="facility-card" data-id="${fac._id}" data-type="${fac.facilityType}">
                             <img src="${imgSrc}" alt="${fac.facilityName || fac.facilityType}" class="facility-img">
                             <div class="facility-content">
                                 <h3 class="facility-title">${fac.facilityName || '-'}</h3>

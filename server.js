@@ -28,6 +28,9 @@ const upload = multer({ storage });
 // ==== Serve uploaded images statically ====
 app.use('/uploads', express.static(uploadDir));
 
+// ==== Serve HTML files ====
+app.use(express.static(__dirname));
+
 // ==== Connect to MongoDB (consider moving to env vars) ====
 const facilitiesDB = mongoose.createConnection('mongodb+srv://dasun:dasun1234@cluster0.kyxbb5f.mongodb.net/facilitiesDB');
 const bookingDB    = mongoose.createConnection('mongodb+srv://dasun:dasun1234@cluster0.kyxbb5f.mongodb.net/bookingDB');
@@ -145,6 +148,18 @@ const studentLogSchema = new mongoose.Schema({
 });
 const StudentLog = logDB.model('StudentLog', studentLogSchema, 'studentlog');
 
+// Union members (faculty union) — replaces student registrations
+const unionLogSchema = new mongoose.Schema({
+  fullname: String,
+  email: String,
+  password: String,
+  faculty: String,
+  idFront: String,
+  idBack: String,
+  createdAt: { type: Date, default: Date.now }
+});
+const UnionLog = logDB.model('UnionLog', unionLogSchema, 'unionlog');
+
 const staffLogSchema = new mongoose.Schema({
   fullname: String, email: String, password: String, createdAt: { type: Date, default: Date.now }
 });
@@ -257,6 +272,24 @@ const bookingHistorySchema = new mongoose.Schema({
 const BookingHistory = bookingDB.model('BookingHistory', bookingHistorySchema);
 
 // ========== USER MANAGEMENT ==========
+// Register union member (faculty union)
+app.post('/api/register/union', upload.fields([{ name: 'idfront', maxCount: 1 }, { name: 'idback', maxCount: 1 }]), async (req, res) => {
+  try {
+    const { fullname, email, password, faculty } = req.body;
+    const idFront = req.files['idfront'] ? req.files['idfront'][0].filename : '';
+    const idBack  = req.files['idback']  ? req.files['idback'][0].filename  : '';
+    if (!fullname || !email || !password || !faculty || !idFront || !idBack)
+      return res.status(400).json({ message: 'Missing required fields' });
+    const union = new UnionLog({ fullname, email, password, faculty, idFront, idBack });
+    await union.save();
+    res.json({ message: 'Faculty Union Member registered!' });
+  } catch (err) { 
+    console.error('Union registration error:', err);
+    res.status(500).json({ message: 'Error registering union member' });
+  }
+});
+
+// Legacy: student registration (kept for backwards compatibility)
 app.post('/api/register/student', upload.fields([{ name: 'idfront', maxCount: 1 }, { name: 'idback', maxCount: 1 }]), async (req, res) => {
   try {
     const { fullname, email, password } = req.body;
@@ -282,8 +315,15 @@ app.post('/api/register/staff', async (req, res) => {
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
+    // Check union members first
+    const union = await UnionLog.findOne({ email, password });
+    if (union) return res.json({ success: true, role: 'union', fullname: union.fullname, userId: union._id, email: union.email, faculty: union.faculty });
+
+    // Then students (legacy)
     const student = await StudentLog.findOne({ email, password });
     if (student) return res.json({ success: true, role: 'student', fullname: student.fullname, userId: student._id, email: student.email });
+
+    // Finally staff
     const staff = await StaffLog.findOne({ email, password });
     if (staff)   return res.json({ success: true, role: 'staff',   fullname: staff.fullname,   userId: staff._id,   email: staff.email });
     res.json({ success: false });
@@ -291,10 +331,12 @@ app.post('/login', async (req, res) => {
 });
 app.get('/api/users', async (req, res) => {
   try {
+    const unions = await UnionLog.find();
     const students = await StudentLog.find();
     const staff = await StaffLog.find();
     const users = [
       ...staff.map(user => ({ id: user._id, fullname: user.fullname, email: user.email, userType: 'Academic Staff' })),
+      ...unions.map(user => ({ id: user._id, fullname: user.fullname, email: user.email, userType: 'Faculty Union Member', faculty: user.faculty })),
       ...students.map(user => ({ id: user._id, fullname: user.fullname, email: user.email, userType: 'Student' }))
     ];
     res.json(users);
@@ -305,6 +347,7 @@ app.delete('/api/users/:id', async (req, res) => {
   try {
     let deleted;
     if (type === 'staff') deleted = await StaffLog.findByIdAndDelete(id);
+    else if (type === 'union') deleted = await UnionLog.findByIdAndDelete(id);
     else if (type === 'student') deleted = await StudentLog.findByIdAndDelete(id);
     else return res.status(400).json({ message: 'User type not specified or invalid' });
     if (!deleted) return res.status(404).json({ message: 'User not found' });
@@ -378,6 +421,19 @@ app.put('/api/facilities/:type/:id', async (req, res) => {
     if (!result) return res.status(404).json({ message: 'Not found' });
     res.json(result);
   } catch (err) { res.status(500).json({ error: 'Failed to update facility' }); }
+});
+app.delete('/api/facilities/:type/:id', async (req, res) => {
+  try {
+    const { type, id } = req.params;
+    const collectionName = type.replace(/_/g, '');
+    const Facility = createFacilityModel(collectionName);
+    const result = await Facility.findByIdAndDelete(id);
+    if (!result) return res.status(404).json({ message: 'Facility not found' });
+    res.json({ message: 'Facility deleted successfully' });
+  } catch (err) { 
+    console.error('Delete facility error:', err);
+    res.status(500).json({ error: 'Failed to delete facility' }); 
+  }
 });
 
 // ========== BOOKING MANAGEMENT ==========
